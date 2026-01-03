@@ -36,11 +36,12 @@ function App() {
         };
         setSessions(prev => [newSession, ...prev]);
         setCurrentSessionId(newSession.id);
+        return newSession.id;
     };
 
-    const updateCurrentSession = (updater) => {
+    const updateCurrentSession = (updater, logicSessionId = currentSessionId) => {
         setSessions(prev => prev.map(s =>
-            s.id === currentSessionId ? updater(s) : s
+            s.id === logicSessionId ? updater(s) : s
         ));
     };
 
@@ -61,7 +62,10 @@ function App() {
     };
 
     const handleSend = async ({ text, file }) => {
-        if (!currentSessionId) createNewSession();
+        let activeSessionId = currentSessionId;
+        if (!activeSessionId) {
+            activeSessionId = createNewSession();
+        }
 
         // Add user message
         const userMsg = {
@@ -71,14 +75,15 @@ function App() {
         };
 
         // We need to use the Updated state for the API call, so we calculate it here
-        const updatedMessages = currentSessionId
-            ? [...(sessions.find(s => s.id === currentSessionId)?.messages || []), userMsg]
+        // Use activeSessionId instead of currentSessionId
+        const updatedMessages = activeSessionId
+            ? [...(sessions.find(s => s.id === activeSessionId)?.messages || []), userMsg]
             : [userMsg];
 
         updateCurrentSession(s => ({
             ...s,
             messages: [...s.messages, userMsg]
-        }));
+        }), activeSessionId);
 
         setIsLoading(true);
 
@@ -88,8 +93,6 @@ function App() {
             if (file) formData.append('file', file);
 
             // Send history for context
-            // Filter out the very last message we just added (userMsg) to avoid duplication logic on backend usually, 
-            // but our backend logic appends new content. So we send PREVIOUS messages.
             const historyToSend = updatedMessages.slice(0, -1);
             formData.append('history', JSON.stringify(historyToSend));
 
@@ -125,7 +128,7 @@ function App() {
                     title: isCreatingTitle ? data.content.title : s.title,
                     messages: [...s.messages, aiMsg]
                 };
-            });
+            }, activeSessionId);
 
         } catch (error) {
             console.error(error);
@@ -135,11 +138,31 @@ function App() {
                 content: "I'm sorry, I encountered an issue. Please try again.",
                 timestamp: Date.now()
             };
-            updateCurrentSession(s => ({ ...s, messages: [...s.messages, errorMsg] }));
+            updateCurrentSession(s => ({ ...s, messages: [...s.messages, errorMsg] }), activeSessionId);
         } finally {
             setIsLoading(false);
         }
     };
+
+    // Handle Auto-Analysis from Chrome Extension
+    useEffect(() => {
+        // Read directly from window location
+        const searchParams = new URLSearchParams(window.location.search);
+        const textParam = searchParams.get('text');
+
+        if (textParam) {
+            // Decode URI component just in case, although URLSearchParams does this automatically
+            // But sometimes double encoding happens
+            const decodedText = decodeURIComponent(textParam);
+
+            // Remove the param immediately
+            const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+            window.history.replaceState({ path: newUrl }, '', newUrl);
+
+            // Trigger analysis
+            handleSend({ text: decodedText });
+        }
+    }, []);
 
     const currentSession = sessions.find(s => s.id === currentSessionId);
 
