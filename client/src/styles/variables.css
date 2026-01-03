@@ -1,0 +1,138 @@
+:root {
+  /* 
+   * FRAMER / LINEAR INSPIRED DESIGN SYSTEM
+   * Premium, Calm, Structured
+   */
+
+  /* Base & Surfaces */
+  --bg-root: #fafafa;
+  /* Main app background (off-white) */
+  --bg-surface-1: #ffffff;
+  /* Cards, Sidebar (clean white) */
+  --bg-surface-2: #f4f4f5;
+  /* Inputs, Hovers */
+  --bg-surface-3: #e4e4e7;
+  /* Active states, borders */
+
+  --bg-glass: rgba(255, 255, 255, 0.7);
+  --blur-layer: blur(12px);
+
+  /* Typography Colors */
+  --text-primary: #18181b;
+  /* Zinc 900 */
+  --text-secondary: #52525b;
+  /* Zinc 600 */
+  --text-tertiary: #a1a1aa;
+  /* Zinc 400 */
+  --text-inverse: #ffffff;
+
+  /* Brand / Semantic */
+  --brand-primary: #18181b;
+  /* Luxury black for primary actions */
+  --brand-accent: #3b82f6;
+  /* Subtle tech blue */
+
+  --color-safe: #10b981;
+  /* Emerald 500 */
+  --color-safe-light: #d1fae5;
+  --color-verify: #f59e0b;
+  /* Amber 500 */
+  --color-verify-light: #fef3c7;
+  --color-avoid: #ef4444;
+  /* Red 500 */
+  --color-avoid-light: #fee2e2;
+
+  /* Borders */
+  --border-subtle: rgba(0, 0, 0, 0.04);
+  --border-default: rgba(0, 0, 0, 0.08);
+  --border-strong: rgba(0, 0, 0, 0.12);
+
+  /* Effects */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.06), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
+  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 10px 10px -5px rgba(0, 0, 0, 0.03);
+  --shadow-floating: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+  /* For Input Dock */
+
+  /* Radius */
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  /* Layout */
+  --sidebar-width: 280px;
+  --header-height: 56px;
+  --dock-height: 80px;
+
+  /* Typography */
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", monospace;
+
+  /* Animation */
+  --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  /* Bouncy */
+  --ease-out: cubic-bezier(0.215, 0.61, 0.355, 1);
+  /* Smooth stop */
+}
+
+/* Reset & Base */
+body {
+  background-color: var(--bg-root);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  /* App-like feel */
+  font-size: 14px;
+}
+
+#root {
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+}
+
+/* Typography Utilities */
+h1,
+h2,
+h3,
+h4,
+5,
+h6 {
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+p {
+  margin: 0;
+  line-height: 1.6;
+}
+
+button {
+  font-family: inherit;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 99px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
+}

@@ -1,0 +1,123 @@
+@import './variables.css';
+
+/* 
+ * APP SHELL LAYOUT
+ * Grid-like structure with fixed sidebar and fluid main content
+ */
+
+.app-shell {
+    display: flex;
+    width: 100vw;
+    height: 100vh;
+    background-color: var(--bg-root);
+    align-items: stretch;
+}
+
+/* Sidebar Area */
+.sidebar-shell {
+    width: var(--sidebar-width);
+    background-color: var(--bg-root);
+    /* Blends with bg, separated by border/space */
+    border-right: 1px solid var(--border-subtle);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    padding: 24px 16px;
+    z-index: 20;
+}
+
+/* Main Content Area */
+.main-shell {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+    background-color: var(--bg-surface-1);
+    /* The "Paper" sheet */
+    margin: 12px;
+    /* Floating sheet look */
+    margin-left: 0;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-subtle);
+}
+
+/* Header */
+.header-shell {
+    height: var(--header-height);
+    padding: 0 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border-subtle);
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: var(--blur-layer);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+/* Chat Scroll Region */
+.chat-viewport {
+    flex: 1;
+    overflow-y: auto;
+    scroll-behavior: smooth;
+    padding: 0 0 160px;
+    /* Padding for bottom dock */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.chat-content-width {
+    width: 100%;
+    max-width: 760px;
+    padding: 40px 24px;
+}
+
+/* Floating Bottom Dock Area */
+.dock-region {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 24px;
+    background: linear-gradient(to top, rgba(255, 255, 255, 1) 40%, rgba(255, 255, 255, 0));
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    pointer-events: none;
+    /* Let clicks pass through transparent areas */
+    z-index: 30;
+}
+
+.dock-content {
+    pointer-events: auto;
+    /* Re-enable pointer events on the actual input */
+    width: 100%;
+    max-width: 720px;
+}
+
+/* Utilities */
+.text-overline {
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+}
+
+.text-h2 {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.glass-panel {
+    background: var(--bg-glass);
+    backdrop-filter: var(--blur-layer);
+    border: 1px solid var(--border-subtle);
+}
