@@ -1,184 +1,217 @@
-import React, { useState, useRef } from 'react';
-import { Send, Paperclip, X, FileText, ArrowUp } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
+import Sidebar from './components/Sidebar';
+import ChatArea from './components/ChatArea';
+import InputArea from './components/InputArea';
+import './styles/main.css';
 
-const InputArea = ({ onSend, isLoading }) => {
-    const [text, setText] = useState('');
-    const [file, setFile] = useState(null);
-    const [isFocused, setIsFocused] = useState(false);
-    const fileInputRef = useRef(null);
+function App() {
+    const [sessions, setSessions] = useState(() => {
+        const saved = localStorage.getItem('reality_check_sessions');
+        return saved ? JSON.parse(saved) : [];
+    });
 
-    const handleSend = () => {
-        if ((!text.trim() && !file) || isLoading) return;
-        onSend({ text, file });
-        setText('');
-        setFile(null);
+    const [currentSessionId, setCurrentSessionId] = useState(null);
+    const [isLoading, setIsLoading] = useState(false);
+
+    // Persist sessions
+    useEffect(() => {
+        localStorage.setItem('reality_check_sessions', JSON.stringify(sessions));
+    }, [sessions]);
+
+    // Initialize with a new session if empty or select most recent
+    useEffect(() => {
+        if (sessions.length === 0 && !currentSessionId) {
+            createNewSession();
+        } else if (sessions.length > 0 && !currentSessionId) {
+            setCurrentSessionId(sessions[0].id);
+        }
+    }, []);
+
+    const createNewSession = () => {
+        const newSession = {
+            id: Date.now().toString(),
+            title: 'New Analysis',
+            messages: [],
+            timestamp: Date.now()
+        };
+        setSessions(prev => [newSession, ...prev]);
+        setCurrentSessionId(newSession.id);
+        return newSession.id;
     };
 
-    const handleKeyDown = (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            handleSend();
+    const updateCurrentSession = (updater, logicSessionId = currentSessionId) => {
+        setSessions(prev => prev.map(s =>
+            s.id === logicSessionId ? updater(s) : s
+        ));
+    };
+
+    const deleteSession = (e, sessionId) => {
+        e.stopPropagation();
+        setSessions(prev => {
+            const newSessions = prev.filter(s => s.id !== sessionId);
+            // If we deleted the current session, switch to the first available one or null
+            if (sessionId === currentSessionId) {
+                if (newSessions.length > 0) {
+                    setCurrentSessionId(newSessions[0].id);
+                } else {
+                    setCurrentSessionId(null);
+                }
+            }
+            return newSessions;
+        });
+    };
+
+    const handleSend = async ({ text, file }) => {
+        let activeSessionId = currentSessionId;
+        if (!activeSessionId) {
+            activeSessionId = createNewSession();
+        }
+
+        // Add user message
+        const userMsg = {
+            role: 'user',
+            content: file ? `Uploaded file: ${file.name}\n${text}` : text,
+            timestamp: Date.now()
+        };
+
+        // We need to use the Updated state for the API call, so we calculate it here
+        // Use activeSessionId instead of currentSessionId
+        const updatedMessages = activeSessionId
+            ? [...(sessions.find(s => s.id === activeSessionId)?.messages || []), userMsg]
+            : [userMsg];
+
+        updateCurrentSession(s => ({
+            ...s,
+            messages: [...s.messages, userMsg]
+        }), activeSessionId);
+
+        setIsLoading(true);
+
+        try {
+            const formData = new FormData();
+            if (text) formData.append('text', text);
+            if (file) formData.append('file', file);
+
+            // Send history for context
+            const historyToSend = updatedMessages.slice(0, -1);
+            formData.append('history', JSON.stringify(historyToSend));
+
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+            const response = await fetch(`${apiUrl}/api/analyze`, {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (!response.ok) throw new Error('Analysis failed');
+
+            const data = await response.json();
+
+            // Handle different response types
+            const aiMsg = {
+                role: 'assistant',
+                timestamp: Date.now()
+            };
+
+            if (data.responseType === 'analysis') {
+                aiMsg.type = 'result';
+                aiMsg.content = data.content; // The structured JSON
+            } else {
+                aiMsg.type = 'text';
+                aiMsg.content = data.content; // The string response
+            }
+
+            // Update session
+            updateCurrentSession(s => {
+                const isCreatingTitle = s.title === 'New Analysis' && data.responseType === 'analysis' && data.content.title;
+                return {
+                    ...s,
+                    title: isCreatingTitle ? data.content.title : s.title,
+                    messages: [...s.messages, aiMsg]
+                };
+            }, activeSessionId);
+
+        } catch (error) {
+            console.error(error);
+            const errorMsg = {
+                role: 'assistant',
+                type: 'text',
+                content: "I'm sorry, I encountered an issue. Please try again.",
+                timestamp: Date.now()
+            };
+            updateCurrentSession(s => ({ ...s, messages: [...s.messages, errorMsg] }), activeSessionId);
+        } finally {
+            setIsLoading(false);
         }
     };
 
-    const handleFileChange = (e) => {
-        if (e.target.files[0]) setFile(e.target.files[0]);
-    };
+    // Handle Auto-Analysis from Chrome Extension
+    useEffect(() => {
+        // Read directly from window location
+        const searchParams = new URLSearchParams(window.location.search);
+        const textParam = searchParams.get('text');
 
-    const textareaRef = useRef(null);
+        if (textParam) {
+            // Decode URI component just in case, although URLSearchParams does this automatically
+            // But sometimes double encoding happens
+            const decodedText = decodeURIComponent(textParam);
 
-    // Auto-resize textarea
-    React.useEffect(() => {
-        if (textareaRef.current) {
-            textareaRef.current.style.height = 'auto'; // Reset to shrink
-            textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`; // Grow up to 200px
+            // Remove the param immediately
+            const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+            window.history.replaceState({ path: newUrl }, '', newUrl);
+
+            // Trigger analysis
+            handleSend({ text: decodedText });
         }
-    }, [text]);
+    }, []);
+
+    const currentSession = sessions.find(s => s.id === currentSessionId);
 
     return (
-        <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            className={`dock-container ${isFocused ? 'focused' : ''}`}
-            style={{
-                width: '100%',
-                background: 'rgba(255, 255, 255, 0.85)',
-                backdropFilter: 'blur(20px) saturate(180%)',
-                borderRadius: 'var(--radius-xl)',
-                border: '1px solid rgba(255,255,255,0.5)',
-                boxShadow: isFocused ?
-                    '0 20px 40px -10px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.05)' :
-                    'var(--shadow-floating)',
-                padding: '12px',
-                transition: 'all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)'
-            }}
-        >
-            {/* File Review Preview */}
-            <AnimatePresence>
-                {file && (
-                    <motion.div
-                        initial={{ height: 0, opacity: 0, marginBottom: 0 }}
-                        animate={{ height: 'auto', opacity: 1, marginBottom: 12 }}
-                        exit={{ height: 0, opacity: 0, marginBottom: 0 }}
-                        style={{ overflow: 'hidden' }}
-                    >
-                        <div style={{
-                            display: 'flex', alignItems: 'center', gap: '12px',
-                            padding: '12px',
-                            background: 'var(--bg-surface-2)',
-                            borderRadius: 'var(--radius-lg)',
-                            border: '1px solid var(--border-subtle)'
-                        }}>
-                            <div style={{
-                                width: '40px', height: '40px',
-                                background: 'white', borderRadius: '8px',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                boxShadow: 'var(--shadow-sm)'
-                            }}>
-                                <FileText size={20} color="var(--brand-accent)" />
+        <div className="app-shell">
+            <Sidebar
+                sessions={sessions}
+                currentSessionId={currentSessionId}
+                onSelectSession={setCurrentSessionId}
+                onNewSession={createNewSession}
+                onDeleteSession={deleteSession}
+            />
+
+            <div className="main-shell">
+                {/* Header */}
+                <div className="header-shell">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '14px', color: 'var(--text-tertiary)' }}>Analysis /</span>
+                        <span style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-primary)' }}>
+                            {currentSession?.title || "New Session"}
+                        </span>
+                    </div>
+                </div>
+
+                {/* Chat Area */}
+                <div className="chat-viewport">
+                    <div className="chat-content-width">
+                        {currentSession ? (
+                            <ChatArea
+                                messages={currentSession.messages}
+                                isTyping={isLoading}
+                            />
+                        ) : (
+                            <div className="flex-center" style={{ height: '400px', color: 'var(--text-tertiary)' }}>
+                                Loading workspace...
                             </div>
-                            <div style={{ flex: 1 }}>
-                                <div style={{ fontSize: '14px', fontWeight: 500 }}>{file.name}</div>
-                                <div style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>PDF Document</div>
-                            </div>
-                            <button
-                                onClick={() => setFile(null)}
-                                style={{
-                                    padding: '6px', background: 'transparent', border: 'none',
-                                    cursor: 'pointer', color: 'var(--text-tertiary)'
-                                }}
-                            >
-                                <X size={16} />
-                            </button>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                        )}
+                    </div>
+                </div>
 
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '12px' }}>
-                <button
-                    onClick={() => fileInputRef.current?.click()}
-                    style={{
-                        padding: '12px',
-                        background: 'transparent',
-                        border: 'none',
-                        borderRadius: '12px',
-                        cursor: 'pointer',
-                        color: 'var(--text-secondary)',
-                        transition: 'background 0.2s',
-                        marginBottom: '2px' // Align with text baselines
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-surface-2)'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                >
-                    <Paperclip size={20} />
-                </button>
-
-                <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleFileChange}
-                    style={{ display: 'none' }}
-                    accept=".pdf,.txt"
-                />
-
-                <textarea
-                    ref={textareaRef}
-                    value={text}
-                    onChange={(e) => setText(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    onFocus={() => setIsFocused(true)}
-                    onBlur={() => setIsFocused(false)}
-                    placeholder="Ask RealityCheck to analyze a contract..."
-                    style={{
-                        flex: 1,
-                        background: 'transparent',
-                        border: 'none',
-                        resize: 'none',
-                        maxHeight: '200px',
-                        minHeight: '24px',
-                        padding: '12px 0',
-                        fontSize: '16px',
-                        lineHeight: '1.5',
-                        outline: 'none',
-                        color: 'var(--text-primary)',
-                        fontFamily: 'inherit',
-                        overflowY: 'auto'
-                    }}
-                    rows={1}
-                />
-
-                <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={handleSend}
-                    disabled={(!text.trim() && !file) || isLoading}
-                    style={{
-                        width: '40px', height: '40px',
-                        borderRadius: '12px',
-                        border: 'none',
-                        background: (!text.trim() && !file) ? 'var(--bg-surface-3)' : 'var(--brand-primary)',
-                        color: (!text.trim() && !file) ? 'var(--text-tertiary)' : 'white',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        cursor: (!text.trim() && !file) ? 'default' : 'pointer',
-                        marginBottom: '4px',
-                        transition: 'background-color 0.2s'
-                    }}
-                >
-                    {isLoading ? (
-                        <motion.div
-                            animate={{ rotate: 360 }}
-                            transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-                            style={{ width: '16px', height: '16px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%' }}
-                        />
-                    ) : (
-                        <ArrowUp size={20} />
-                    )}
-                </motion.button>
+                {/* Floating Dock */}
+                <div className="dock-region">
+                    <div className="dock-content">
+                        <InputArea onSend={handleSend} isLoading={isLoading} />
+                    </div>
+                </div>
             </div>
-        </motion.div>
+        </div>
     );
-};
+}
 
-export default InputArea;
+export default App;
