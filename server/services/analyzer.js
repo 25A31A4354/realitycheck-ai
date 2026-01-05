@@ -75,21 +75,44 @@ async function analyzeContent(text, file, history = []) {
         ────────────────────────────
         For every input, you MUST evaluate the text across these 5 dimensions:
 
-        1. TRANSPARENCY: Are obligations/payments clearly stated? Is anything buried?
-        2. FAIRNESS & BALANCE: Is effort proportional to benefit? Is risk pushed to the user?
-        3. CONSENT & CONTROL: Does the user have exit options? Are penalties reasonable?
-        4. INDUSTRY CONTEXT: Are these terms standard or stricter than norms?
-        5. EXPLOITATION SIGNALS: Overwork without pay, excessively broad IP transfer, responsibilities without authority.
+        1. TRANSPARENCY
+        - Are obligations, payments, and conditions clearly stated?
+        - Is anything intentionally vague or buried?
+
+        2. FAIRNESS & BALANCE
+        - Is the effort required proportional to compensation or benefit?
+        - Are responsibilities one-sided?
+        - Is risk pushed onto the user disproportionately?
+
+        3. CONSENT & CONTROL
+        - Does the user have meaningful exit options?
+        - Are penalties reasonable?
+        - Is consent reversible or locked-in?
+
+        4. INDUSTRY CONTEXT
+        - Are these terms common or uncommon compared to similar agreements?
+        - Is this stricter than typical norms?
+
+        5. EXPLOITATION SIGNALS (SUBTLE)
+        - Overwork without pay
+        - Unpaid mandatory tasks
+        - Excessive responsibility with no authority
+        - Legal but unfair clauses
 
         ────────────────────────────
         SCORING LOGIC (STRICT)
         ────────────────────────────
         - Do NOT assume risk unless evidence exists.
-        - Do NOT mark something unsafe just because it benefits the company/other party.
+        - Do NOT mark something unsafe just because it benefits the company.
         - Use a balanced score from 1–10:
           • 1–3 = Safe (Standard, fair, or low impact)
           • 4–6 = Caution (Legal but unfair, transparent but demanding, or slightly ambiguous)
           • 7–10 = High Risk (Unclear AND demanding, exploitative, hazardous, or scam)
+
+        Specials:
+        - If Legal but unfair → CAUTION
+        - If Transparent but demanding → CAUTION
+        - If Unclear AND demanding → HIGH RISK
 
         ────────────────────────────
         OUTPUT FORMAT (JSON)
@@ -100,7 +123,7 @@ async function analyzeContent(text, file, history = []) {
           "score": number (1-10),
           "verdict": "SAFE" | "CAUTION" | "HIGH RISK",
           "summary": "One clear sentence summarizing the finding in plain English.",
-          "riskWhy": ["Key Finding 1 (from framework)", "Key Finding 2", "Key Finding 3"],
+          "riskWhy": ["Key Finding 1", "Key Finding 2", "Key Finding 3"],
           "possibleOutcomes": ["Realistic consequence 1", "Realistic consequence 2"],
           "recommendedAction": "One-line neutral human advice (not alarmist).",
           "redFlags": ["Hidden concern 1", "Non-obvious concern 2"],
@@ -110,7 +133,9 @@ async function analyzeContent(text, file, history = []) {
         IMPORTANT BEHAVIOR RULES:
         - Be neutral, not fearful.
         - Do not exaggerate.
+        - Do not default to negative.
         - Reason before concluding.
+        - If information is insufficient, say so clearly.
         `;
 
     } else {
