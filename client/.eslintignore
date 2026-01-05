@@ -1,0 +1,4 @@
+root: true
+node_modules
+dist
+.env

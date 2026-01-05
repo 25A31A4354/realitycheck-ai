@@ -103,7 +103,8 @@ async function analyzeContent(text, file, history = []) {
           "riskWhy": ["Key Finding 1 (from framework)", "Key Finding 2", "Key Finding 3"],
           "possibleOutcomes": ["Realistic consequence 1", "Realistic consequence 2"],
           "recommendedAction": "One-line neutral human advice (not alarmist).",
-          "redFlags": ["Hidden concern 1", "Non-obvious concern 2"] (Empty array if SAFE)
+          "redFlags": ["Hidden concern 1", "Non-obvious concern 2"],
+          "confidenceScore": number (0-100)
         }
 
         IMPORTANT BEHAVIOR RULES:
